@@ -54,3 +54,60 @@ to setup-globals
   set slider-check-3 Degree-of-suspicion
   set slider-check-4 Worrying-time
 end
+
+to setup-people
+  create-turtles initial-people
+    [ setxy random-xcor random-ycor
+      set known? false
+      set coupled? false
+      set partner nobody
+      ifelse random 2 = 0
+        [ set shape "person righty" ]
+        [ set shape "person lefty" ]
+      ;; 2.5% of the people start out fakenews, but they don't know it
+      set fakenews? (who < initial-people * 0.025)
+      if fakenews?
+        [ set infection-length random-float symptoms-show ]
+      assign-commitment
+      assign-coupling-tendency
+      assign-suspicion
+      assign-test-frequency
+      assign-color ]
+end
+
+;; Different people are displayed in 3 different colors depending on health
+;; green is not fakenews
+;; blue is fakenews but doesn't know it
+;; red is fakenews and knows it
+
+to assign-color  ;; turtle procedure
+  ifelse not fakenews?
+    [ set color green ]
+    [ ifelse known?
+      [ set color red ]
+      [ set color blue ] ]
+end
+
+
+to assign-commitment  ;; turtle procedure
+  set commitment random-near 20
+end
+
+to assign-coupling-tendency  ;; turtle procedure
+  set coupling-tendency random-near active_tendency
+end
+
+to assign-suspicion  ;; turtle procedure
+  set suspicion random-near Degree-of-suspicion
+end
+
+to assign-test-frequency  ;; turtle procedure
+  set test-frequency random-near Worrying-time
+end
+
+to-report random-near [center]  ;;
+  let result 0
+  repeat 40
+    [ set result (result + random-float center) ]
+  report result / 20
+end
