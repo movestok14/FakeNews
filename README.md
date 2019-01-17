@@ -12,7 +12,7 @@ To understand
 It is difficult to solve a complex relationship problem by mathmatically.
 So we judge this proble as Large & complex-system and apllied it to ABM.
 
-We make interation of agent, agent and agent, patch.
+We make interaction of agent, agent and agent, patch.
 
 -------
 Tuttle : person
