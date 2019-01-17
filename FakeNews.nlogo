@@ -10,3 +10,17 @@ globals [
   slider-check-3    ;;   change people's tendencies appropriately.
   slider-check-4
 ]
+
+turtles-own [
+  fakenews?          
+  known?             
+  infection-length   ;; How long the person has been fakenews.
+  coupled?           
+  couple-length      
+  ;; the next four values are controlled by sliders
+  commitment         ;; 
+  coupling-tendency  
+  suspicion         
+  test-frequency     
+  partner            
+]
