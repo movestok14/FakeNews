@@ -159,3 +159,100 @@ to regrow-grass
     recolor-grass
   ]
 end;;|
+
+to eat
+  ;; check to make sure there is grass here
+  if ( grass-amount >= 0.1 ) [  ;;
+    ;; increment the sheep's energy
+    set suspicion suspicion + 0.1
+    ;; decrement the grass
+    set grass-amount grass-amount - 0.1
+    recolor-grass
+  ]
+end;;|
+
+
+
+to check-sliders
+
+  if (slider-check-2 != active_tendency)
+    [ ask turtles [ assign-coupling-tendency ]
+      set slider-check-2 active_tendency ]
+  if (slider-check-3 != Degree-of-suspicion)
+    [ ask turtles [ assign-suspicion ]
+      set slider-check-3 Degree-of-suspicion ]
+  if (slider-check-4 != Worrying-time )
+    [ ask turtles [ assign-test-frequency ]
+      set slider-check-4 Worrying-time ]
+end
+
+;; People move about at random.
+
+to move  ;; turtle procedure
+  rt random-float 360
+  fd 1
+end
+
+
+to couple  ;; turtle procedure -- righties only!
+  let potential-partner one-of (turtles-at -1 0)
+                          with [not coupled? and shape = "person lefty"]
+  if potential-partner != nobody
+    [ if random-float 10.0 < [coupling-tendency] of potential-partner
+      [ set partner potential-partner
+        set coupled? true
+        ask partner [ set coupled? true ]
+        ask partner [ set partner myself ]
+        move-to patch-here ;; move to center of patch
+        ask potential-partner [move-to patch-here] ;; partner moves to center of patch
+        set pcolor gray - 3
+        ask (patch-at -1 0) [ set pcolor gray - 3 ] ] ]
+end
+
+
+to uncouple  ;; turtle procedure
+  if coupled? and (shape = "person righty")
+    [ if (couple-length > commitment) or
+         ([couple-length] of partner) > ([commitment] of partner)
+        [ set coupled? false
+          set couple-length 0
+          ask partner [ set couple-length 0 ]
+          set pcolor black
+          ask (patch-at -1 0) [ set pcolor black ]
+          ask partner [ set partner nobody ]
+          ask partner [ set coupled? false ]
+          set partner nobody ] ]
+end
+
+
+to infect  ;; turtle procedure          ;;
+  if coupled? and fakenews? and not known?      ;;,
+    [ if random-float 10 > suspicion or random-float 10 > ([suspicion] of partner) ;;
+        [ ifelse random-float 100 < infection-chance  
+            [ ask partner [ set fakenews? true ] ] ;; fakenews
+            [ ask partner [ set fakenews? false ] ] ;; truenews
+
+
+  ] ]
+end
+
+to test  ;; turtle procedure
+  if random-float 52 < test-frequency
+    [ if fakenews?
+        [ set known? true ] ]
+  if infection-length > symptoms-show
+    [ if random-float 100 < 5
+        [ set known? true ] ]
+end
+
+;;;
+;;; MONITOR PROCEDURES
+;;;
+
+to-report %fakenews
+  ifelse any? turtles
+    [ report (count turtles with [fakenews?] / count turtles) * 100 ]
+    [ report 0 ]
+end
+; Copyright 1997 Uri Wilensky.
+; See Info tab for full copyright and license.
