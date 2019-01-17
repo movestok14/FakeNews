@@ -111,3 +111,51 @@ to-report random-near [center]  ;;
     [ set result (result + random-float center) ]
   report result / 20
 end
+
+
+;;;
+;;; GO PROCEDURES
+;;;
+
+to go
+  ;;----------------
+  regrow-grass    ;; the grass grows back|
+
+  if all? turtles [known?]
+    [ stop ]
+  check-sliders
+  ask turtles
+    [
+     eat;;-----------------
+
+      if fakenews?
+        [ set infection-length infection-length + 1 ]
+      if coupled?
+        [ set couple-length couple-length + 1 ] ]
+  ask turtles
+    [ if not coupled?
+        [ move ] ]
+  ask turtles
+    [ if not coupled? and shape = "person righty" and (random-float 10.0 < coupling-tendency)
+        [ couple ] ]
+  ask turtles [ uncouple ]
+  ask turtles [ infect ]
+  ask turtles [ test ]
+  ask turtles [ assign-color ]
+  tick
+end
+
+;;------------------------------
+to recolor-grass
+  set pcolor scale-color green grass-amount 0 20
+end;;|
+;; regrow the grass
+to regrow-grass
+  ask patches [
+    set grass-amount grass-amount + grass-regrowth-rate
+    if grass-amount > 10 [
+      set grass-amount 10
+    ]
+    recolor-grass
+  ]
+end;;|
