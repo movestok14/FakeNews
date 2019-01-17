@@ -19,6 +19,7 @@ Tuttle : person
 Patch : multimedia
 
 Green : True News
+
 Red : Fake News
 
 ------
