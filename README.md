@@ -20,5 +20,7 @@ Patch : multimedia
 
 Green : True News
 Red : Fake News
----
+
+------
+
 Working on this project with JungwonL.
