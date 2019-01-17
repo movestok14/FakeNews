@@ -6,7 +6,7 @@ FakeNews is type of yellow journalism or propaganda that consists of deliberate 
 Why?
 To understand
 1. Measure the Spread of fake news speed
-2. Is there any possibility of recovery from fake news to ture news?
+2. Is there any possibility of recovery from fake news to true news?
 3. Identify the influence from various media
 
 It is difficult to solve a complex relationship problem by mathmatically.
