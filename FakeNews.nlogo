@@ -47,7 +47,7 @@ to setup
       [ set spin  1 ];; 진짜뉴스 색칠
       [ set spin -1 ];; 가짜뉴스 색칠
     recolor-grass
-    ;;set pcolor scale-color green grass-amount 0 20       
+    ;;set pcolor scale-color green grass-amount 0 20
   ];;|
 
   setup-globals
@@ -66,64 +66,105 @@ to setup-globals
   set slider-check-4 Worrying-time
 end
 
-;; People move about at random.
+;; Create carrying-capacity number of people half are righty and half are lefty
+;;   and some are sick.  Also assigns colors to people with the ASSIGN-COLORS routine.
 
-to move  ;; turtle procedure
-  rt random-float 360
-  fd 1
+to setup-people
+  create-turtles initial-people
+    [ setxy random-xcor random-ycor
+      set known? false
+      set relationshipd? false
+      set partner nobody
+      ifelse random 2 = 0
+        [ set shape "person righty" ]
+        [ set shape "person lefty" ]
+      ;; 2.5% of the people start out fakenews, but they don't know it
+      set fakenews? (who < initial-people * 0.025)
+      if fakenews?
+        [ set infection-length random-float symptoms-show ]
+      assign-commitment
+      assign-coupling-tendency
+      assign-suspicion
+      assign-test-frequency
+      assign-color ]
+end
+
+;; Different people are displayed in 3 different colors depending on health
+;; green is not fakenews
+;; blue is fakenews but doesn't know it
+;; red is fakenews and knows it
+
+to assign-color  ;; turtle procedure
+  ifelse not fakenews?
+    [ set color green ]
+    [ ifelse known?
+      [ set color red ]
+      [ set color blue ] ]
+end
+
+;; The following four procedures assign core turtle variables.  They use
+;; the helper procedure RANDOM-NEAR so that the turtle variables have an
+;; approximately "normal" distribution around the average values set by
+;; the sliders.
+
+to assign-commitment  ;; turtle procedure
+  set commitment random-near 20
+end
+
+to assign-coupling-tendency  ;; turtle procedure
+  set coupling-tendency random-near active_tendency
+end
+
+to assign-suspicion  ;; turtle procedure
+  set suspicion random-near Degree-of-suspicion
+end
+
+to assign-test-frequency  ;; turtle procedure
+  set test-frequency random-near Worrying-time
+end
+
+to-report random-near [center]  ;; 터틀 왔다갔다하는거 구현
+  let result 0
+  repeat 40
+    [ set result (result + random-float center) ]
+  report result / 20
+end
+
+;;;
+;;; GO PROCEDURES
+;;;
+
+to go
+  ;;----------------
+  regrow-grass    ;; the grass grows back|
+
+  if all? turtles [known?]
+    [ stop ]
+  check-sliders
+  ask turtles
+    [
+     eat;;-----------------
+
+      if fakenews?
+        [ set infection-length infection-length + 1 ]
+      if relationshipd?
+        [ set relationship-length relationship-length + 1 ] ]
+  ask turtles
+    [ if not relationshipd?
+        [ move ] ]
+  ;; Righties are always the ones to initiate mating.  This is purely
+  ;; arbitrary choice which makes the coding easier.
+  ask turtles
+    [ if not relationshipd? and shape = "person righty" and (random-float 10.0 < coupling-tendency)
+        [ relationship ] ]
+  ask turtles [ unrelationship ]
+  ask turtles [ infect ]
+  ask turtles [ test ]
+  ask turtles [ assign-color ]
+  tick
 end
 
 
-to couple  ;; turtle procedure -- righties only!
-  let potential-partner one-of (turtles-at -1 0)
-                          with [not coupled? and shape = "person lefty"]
-  if potential-partner != nobody
-    [ if random-float 10.0 < [coupling-tendency] of potential-partner
-      [ set partner potential-partner
-        set coupled? true
-        ask partner [ set coupled? true ]
-        ask partner [ set partner myself ]
-        move-to patch-here ;; move to center of patch
-        ask potential-partner [move-to patch-here] ;; partner moves to center of patch
-        set pcolor gray - 3
-        ask (patch-at -1 0) [ set pcolor gray - 3 ] ] ]
-end
-
-
-to uncouple  ;; turtle procedure
-  if coupled? and (shape = "person righty")
-    [ if (couple-length > commitment) or
-         ([couple-length] of partner) > ([commitment] of partner)
-        [ set coupled? false
-          set couple-length 0
-          ask partner [ set couple-length 0 ]
-          set pcolor black
-          ask (patch-at -1 0) [ set pcolor black ]
-          ask partner [ set partner nobody ]
-          ask partner [ set coupled? false ]
-          set partner nobody ] ]
-end
-
-
-to infect  ;; turtle procedure          ;;
-  if coupled? and fakenews? and not known?      ;;,
-    [ if random-float 10 > suspicion or random-float 10 > ([suspicion] of partner) ;;
-        [ ifelse random-float 100 < infection-chance  
-            [ ask partner [ set fakenews? true ] ] ;; fakenews
-            [ ask partner [ set fakenews? false ] ] ;; truenews
-
-
-  ] ]
-end
-
-to test  ;; turtle procedure
-  if random-float 52 < test-frequency
-    [ if fakenews?
-        [ set known? true ] ]
-  if infection-length > symptoms-show
-    [ if random-float 100 < 5
-        [ set known? true ] ]
-end
 
 ;;;
 ;;; MONITOR PROCEDURES
