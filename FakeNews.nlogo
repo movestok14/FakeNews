@@ -254,5 +254,4 @@ to-report %fakenews
     [ report (count turtles with [fakenews?] / count turtles) * 100 ]
     [ report 0 ]
 end
-; Copyright 1997 Uri Wilensky.
-; See Info tab for full copyright and license.
+; Copyright 1997 Uri Wilensky.; See Info tab for full copyright and license.
