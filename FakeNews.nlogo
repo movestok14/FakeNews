@@ -24,3 +24,33 @@ turtles-own [
   test-frequency     
   partner            
 ]
+
+;;;
+;;; SETUP PROCEDURES
+;;;
+
+to setup
+  clear-all
+  ;;---------------------------
+    ask patches [
+    ;; give grass to the patches, color it shades of green
+    set grass-amount random-float 1.0
+    set pcolor scale-color green grass-amount 0 20
+
+  ];;|
+
+  setup-globals
+  setup-people
+  reset-ticks
+
+end
+
+to setup-globals
+  set infection-chance 50    
+                             
+  set symptoms-show 200.0   
+
+  set slider-check-2 active_tendency
+  set slider-check-3 Degree-of-suspicion
+  set slider-check-4 Worrying-time
+end
