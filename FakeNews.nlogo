@@ -164,6 +164,129 @@ to go
   tick
 end
 
+;;------------------------------
+to recolor-grass
+  ifelse spin = 1
+  [set pcolor scale-color lime grass-amount 0 20]
+  [set pcolor scale-color orange grass-amount 0 20]
+end
+
+  ;;set pcolor scale-color green grass-amount 0 20
+;;end;;|
+;; regrow the grass
+to regrow-grass   ;;항상 방송에서 가짜뉴스를 틀어주는게 아니기 때문에 10%비율로 증가하게 함
+  ask patches [
+    set grass-amount grass-amount + grass-regrowth-rate
+    if grass-amount > 10 [
+      set grass-amount 10
+    ]
+    recolor-grass
+  ]
+end;;|
+to eat
+  ;; check to make sure there is grass here
+  if ( grass-amount >= 0.1 ) [  ;;초록색 먹으면 1추가가됨, 원래코드는 energy-gain-from-grass였고 슬라이드로 조절가능
+    ;; increment the sheep's energy
+    set suspicion suspicion + 0.1
+    ;; decrement the grass
+    set grass-amount grass-amount - 5
+    recolor-grass
+  ]
+end;;|
+
+
+
+;; Each tick a check is made to see if sliders have been changed.
+;; If one has been, the corresponding turtle variable is adjusted
+
+to check-sliders
+
+  if (slider-check-2 != active_tendency)
+    [ ask turtles [ assign-coupling-tendency ]
+      set slider-check-2 active_tendency ]
+  if (slider-check-3 != Degree-of-suspicion)
+    [ ask turtles [ assign-suspicion ]
+      set slider-check-3 Degree-of-suspicion ]
+  if (slider-check-4 != Worrying-time )
+    [ ask turtles [ assign-test-frequency ]
+      set slider-check-4 Worrying-time ]
+end
+
+;; People move about at random.
+
+to move  ;; turtle procedure
+  rt random-float 360
+  fd 1
+end
+
+;; People have a chance to relationship depending on their tendency to have  and
+;; if they meet.  To better show that coupling has occurred, the patches below
+;; the relationship turn gray.
+
+to relationship  ;; turtle procedure -- righties only!
+  let potential-partner one-of (turtles-at -1 0)
+                          with [not relationshipd? and shape = "person lefty"]
+  if potential-partner != nobody
+    [ if random-float 10.0 < [coupling-tendency] of potential-partner
+      [ set partner potential-partner
+        set relationshipd? true
+        ask partner [ set relationshipd? true ]
+        ask partner [ set partner myself ]
+        move-to patch-here ;; move to center of patch
+        ask potential-partner [move-to patch-here] ;; partner moves to center of patch
+        set pcolor gray - 3
+        ask (patch-at -1 0) [ set pcolor gray - 3 ] ] ]
+end
+
+;; If two peoples are together for longer than either person's commitment variable
+;; allows, the relationship breaks up.
+
+to unrelationship  ;; turtle procedure
+  if relationshipd? and (shape = "person righty")
+    [ if (relationship-length > commitment) or
+         ([relationship-length] of partner) > ([commitment] of partner)
+        [ set relationshipd? false
+          set relationship-length 0
+          ask partner [ set relationship-length 0 ]
+          set pcolor black
+          ask (patch-at -1 0) [ set pcolor black ]
+          ask partner [ set partner nobody ]
+          ask partner [ set relationshipd? false ]
+          set partner nobody ] ]
+end
+
+;; Infection can occur if either person is fakenews, but the infection is unknown.
+;; This model assumes that people with known infections will continue to relationship,
+;; but will automatically practice safe , regardless of their suspicion tendency.
+;; Note also that for condom use to occur, both people must want to use one.  If
+;; either person chooses not to use a condom, infection is possible.  Changing the
+;; primitive to AND in the third line will make it such that if either person
+;; wants to use a condom, infection will not occur.
+
+to infect  ;; turtle procedure          ;;★spread★
+  if relationshipd? and fakenews? and not known?      ;;relationship이고,
+    [ if random-float 10 > suspicion or random-float 10 > ([suspicion] of partner) ;;본인 혹은 파트너의 suspicion이 10보다 작으면 다음 if.
+        [ ifelse random-float 100 < infection-chance   ;;100까지 랜덤값에서 50보다 작으면 fakenews
+            [ ask partner [ set fakenews? true ] ] ;; fakenews로
+            [ ask partner [ set fakenews? false ] ] ;; truenews로
+
+
+  ] ]
+end
+
+;; People have a tendency to check out their health status based on a slider value.
+;; This tendency is checked against a random number in this procedure. However, after being fakenews for
+;; some amount of time called SYMPTOMS-SHOW, there is a 5% chance that the person will
+;; become ill and go to a doctor and be tested even without the tendency to check.
+
+to test  ;; turtle procedure
+  if random-float 52 < test-frequency
+    [ if fakenews?
+        [ set known? true ] ]
+  if infection-length > symptoms-show
+    [ if random-float 100 < 5
+        [ set known? true ] ]
+end
 
 
 ;;;
