@@ -8,7 +8,7 @@ patches-own [
 globals [
   exposure-chance      ;; The chance out of 100 that an fakenews person will pass on
                        ;; exposure to fakenews during one week of couplehood.
-  self-fact-check      ;; How long a person will be exposed fakenews before noticed fakenews
+  self-known-check      ;; How long a person will be exposed fakenews before noticed fakenews
   slider-check-1       ;; Temporary variables for slider values
   slider-check-2
   slider-check-3
@@ -18,7 +18,7 @@ globals [
 turtles-own [
   fakenews?             ;; If true, the person is exposed to fakenews.  It may be known or unknown.
   known?                ;; If true, the fakenews is known (and fakenews? must also be true).
-  exposure-count        ;; How long the person has been exposed to fakenews.
+  exposure-count        ;; How many the person has been exposed to fakenews.
   meeting?              ;; If true, the person is in a meeting.
   meeting-time          ;; How long the person has been in a meeting.
 
@@ -50,7 +50,7 @@ end
 
 to setup-globals
   set exposure-chance 50       ;; you have a 50% chance before believeing fakenews
-  set self-fact-check 100.0    ;; you check fake or true after believeing fakenews
+  set self-known-check 100.0    ;; you check fake or true after believeing fakenews
   set slider-check-2 average-active-tendency
   set slider-check-3 average-suspicion-degree
   set slider-check-4 average-worrying-time
@@ -68,7 +68,7 @@ to setup-people
       ;; 2.5% of the people start out fakenews, but they don't know it
       set fakenews? (who < initial-people * 0.025)
       if fakenews?
-        [ set exposure-count random-float self-fact-check ]
+        [ set exposure-count random-float self-known-check ]
       assign-trust
       assign-active-tendency
       assign-suspicion
@@ -89,10 +89,6 @@ to assign-color  ;; turtle procedure
       [ set color blue ] ]
 end
 
-;; The following four procedures assign core turtle variables.  They use
-;; the helper procedure RANDOM-NEAR so that the turtle variables have an
-;; approximately "normal" distribution around the average values set by
-;; the sliders.
 
 ;; turtle procedure
 to assign-trust
@@ -142,7 +138,7 @@ to go
         [ in-meeting ] ]
   ask turtles [ end-of-meeting ]
   ask turtles [ FAKENEWS ]
-  ask turtles [ fact-check ]
+  ask turtles [ known-check ]
   ask turtles [ assign-color ]
   tick
 end
@@ -236,16 +232,16 @@ to FAKENEWS
   ] ]
 end
 
-to fact-check
+to known-check
   if random-float 52 < suspicion-frequency
     [ if fakenews?
         [ set known? true ] ]
-  if exposure-count > self-fact-check
+  if exposure-count > self-known-check
     [ if random-float 100 < 5
         [ set known? true ] ]
 end
 
-to exposure-count-check
+to exposure-count-check  ;;exposure times in fakenews ;;사용안함
   if exposure-count < 56 or exposure-count > 44
   [set known? false]
   if exposure-count < 45
@@ -347,7 +343,7 @@ initial-people
 initial-people
 50
 500
-395.0
+0.0
 1
 1
 NIL
@@ -362,7 +358,7 @@ active_tendency
 active_tendency
 0
 10
-2.0
+0.0
 1
 1
 NIL
@@ -377,7 +373,7 @@ Degree-of-suspicion
 Degree-of-suspicion
 0
 10
-2.0
+0.0
 1
 1
 NIL
@@ -392,7 +388,7 @@ Worrying-time
 Worrying-time
 0
 2
-0.7
+0.0
 0.01
 1
 times/year
@@ -427,7 +423,7 @@ grass-regrowth-rate
 grass-regrowth-rate
 0
 2.0
-2.0
+0.0
 0.1
 1
 NIL
@@ -442,7 +438,7 @@ probability-of-spin-up
 probability-of-spin-up
 0
 100
-33.0
+0.0
 1
 1
 %
