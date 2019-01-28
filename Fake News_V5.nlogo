@@ -1,33 +1,32 @@
 patches-own [
-  grass-amount
+  fakenews-amount
   spin   ;;holds -1 or 1
 
-]  ;; patches have grass|
-
-
-
+]  ;; patches have fakenews|
 
 globals [
-  infection-chance
-  symptoms-show
-  slider-check-1
+  exposure-chance      ;; The chance out of 100 that an fakenews person will pass on
+                       ;; exposure to fakenews during one week of couplehood.
+  self-known-check      ;; How long a person will be exposed fakenews before noticed fakenews
+  slider-check-1       ;; Temporary variables for slider values
   slider-check-2
   slider-check-3
   slider-check-4
 ]
 
 turtles-own [
-  fakenews?          ;; If true, the person is fakenews.  It may be known or unknown.
-  known?             ;; If true, the infection is known (and fakenews? must also be true).
-  infection-length   ;; How long the person has been fakenews.
-  coupled?           ;; If true, the person is in a relationshipually active couple.
-  couple-length      ;; How long the person has been in a couple.
+  fakenews?             ;; If true, the person is exposed to fakenews.  It may be known or unknown.
+  known?                ;; If true, the fakenews is known (and fakenews? must also be true).
+  exposure-count        ;; How many the person has been exposed to fakenews.
+  meeting?              ;; If true, the person is in a meeting.
+  meeting-time          ;; How long the person has been in a meeting.
+
   ;; the next four values are controlled by sliders
-  commitment         ;; How long the person will stay in a couple-relationship.
-  coupling-tendency  ;; How likely the person is to join a couple.
-  suspicion         ;; The percent chance a person uses protection.
-  test-frequency     ;; Number of times a person will get tested per year.
-  partner            ;; The person that is our current partner in a couple.
+  trust                 ;; How long the person will stay in a relationship with meeting partner.
+  active-tendency       ;; How likely the person is to join a meeting.
+  suspicion             ;; The percent chance a person think suspicion.
+  suspicion-frequency   ;; Number of times a person will get fact check per day.
+  partner               ;; The person that is our current partner in a meeting.
 ]
 
 ;;;
@@ -36,40 +35,31 @@ turtles-own [
 
 to setup
   clear-all
-  ;;---------------------------
-    ask patches [
-    ;; give grass to the patches, color it shades of green
-    set grass-amount random-float 1.0
-
+    ask patches [       ;; give fakenews to the patches, color it shades of green
+    set fakenews-amount random-float 1.0
     ifelse random 100 < probability-of-spin-up
-      [ set spin  1 ];; 진짜뉴스 색칠
-      [ set spin -1 ];; 가짜뉴스 색칠
-    recolor-grass
-    ;;set pcolor scale-color green grass-amount 0 20
-  ];;|
-
+      [ set spin  1 ]   ;; truenews random setting
+      [ set spin -1 ]   ;; fakenews random setting
+    recolor-fakenews    ;; set pcolor scale-color green fakenews-amount 0 20
+  ]
   setup-globals
   setup-people
   reset-ticks
-
 end
 
 to setup-globals
-  set infection-chance 50    ;; if you have unprotected relationship with an fakenews partner,
-                             ;; you have a 50% chance of being fakenews
-  set symptoms-show 100.0    ;; symptoms show up 200 weeks after infection
-
-  set slider-check-2 active_tendency
-  set slider-check-3 Degree-of-suspicion
-  set slider-check-4 Worrying-time
+  set exposure-chance 50       ;; you have a 50% chance before believeing fakenews
+  set self-known-check 100.0    ;; you check fake or true after believeing fakenews
+  set slider-check-2 average-active-tendency
+  set slider-check-3 average-suspicion-degree
+  set slider-check-4 average-worrying-time
 end
-
 
 to setup-people
   create-turtles initial-people
     [ setxy random-xcor random-ycor
       set known? false
-      set coupled? false
+      set meeting? false
       set partner nobody
       ifelse random 2 = 0
         [ set shape "person righty" ]
@@ -77,16 +67,16 @@ to setup-people
       ;; 2.5% of the people start out fakenews, but they don't know it
       set fakenews? (who < initial-people * 0.025)
       if fakenews?
-        [ set infection-length random-float symptoms-show ]
-      assign-commitment
-      assign-coupling-tendency
+        [ set exposure-count random-float self-known-check ]
+      assign-trust
+      assign-active-tendency
       assign-suspicion
-      assign-test-frequency
+      assign-suspicion-frequency
       assign-color ]
 end
 
-;; Different people are displayed in 3 different colors depending on health
-;; green is not fakenews
+;; Different people are displayed in 3 different colors depending on believeing true or false
+;; green is truenews
 ;; blue is fakenews but doesn't know it
 ;; red is fakenews and knows it
 
@@ -98,28 +88,25 @@ to assign-color  ;; turtle procedure
       [ set color blue ] ]
 end
 
-;; The following four procedures assign core turtle variables.  They use
-;; the helper procedure RANDOM-NEAR so that the turtle variables have an
-;; approximately "normal" distribution around the average values set by
-;; the sliders.
 
-to assign-commitment  ;; turtle procedure
-  set commitment random-near 20
+;; turtle procedure
+to assign-trust
+  set trust random-near 20
 end
 
-to assign-coupling-tendency  ;; turtle procedure
-  set coupling-tendency random-near active_tendency
+to assign-active-tendency
+  set active-tendency random-near average-active-tendency
 end
 
-to assign-suspicion  ;; turtle procedure
-  set suspicion random-near Degree-of-suspicion
+to assign-suspicion
+  set suspicion random-near average-suspicion-degree
 end
 
-to assign-test-frequency  ;; turtle procedure
-  set test-frequency random-near Worrying-time
+to assign-suspicion-frequency
+  set suspicion-frequency random-near average-worrying-time
 end
 
-to-report random-near [center]  ;; 터틀 왔다갔다하는거 구현
+to-report random-near [center]
   let result 0
   repeat 40
     [ set result (result + random-float center) ]
@@ -131,81 +118,67 @@ end
 ;;;
 
 to go
-  ;;----------------
-  regrow-grass    ;; the grass grows back|
-
+  fakenews-reproduction    ;; the fakenews grows back|
   if all? turtles [known?]
     [ stop ]
   check-sliders
   ask turtles
     [
-     eat;;-----------------
-
+     exposure
       if fakenews?
-        [ set infection-length infection-length + 1 ]
-      if coupled?
-        [ set couple-length couple-length + 1 ] ]
+        [ set exposure-count exposure-count + 1 ]
+      if meeting?
+        [ set meeting-time meeting-time + 1 ] ]
   ask turtles
-    [ if not coupled?
+    [ if not meeting?
         [ move ] ]
-  ;; Righties are always the ones to initiate mating.  This is purely
-  ;; arbitrary choice which makes the coding easier.
   ask turtles
-    [ if not coupled? and shape = "person righty" and (random-float 10.0 < coupling-tendency)
-        [ couple ] ]
-  ask turtles [ uncouple ]
-  ask turtles [ infect ]
-  ask turtles [ test ]
+    [ if not meeting? and shape = "person righty" and (random-float 10.0 < active-tendency)
+        [ in-meeting ] ]
+  ask turtles [ end-of-meeting ]
+  ask turtles [ FAKENEWS ]
+  ask turtles [ known-check ]
   ask turtles [ assign-color ]
   tick
 end
 
-;;------------------------------
-to recolor-grass
+to recolor-fakenews
   ifelse spin = 1
-  [set pcolor scale-color lime grass-amount 0 20]
-  [set pcolor scale-color orange grass-amount 0 20]
+  [set pcolor scale-color green fakenews-amount 0 50]
+  [set pcolor scale-color red fakenews-amount 0 50]
 end
 
-  ;;set pcolor scale-color green grass-amount 0 20
-;;end;;|
-;; regrow the grass
-to regrow-grass
+;; reproduction the fakenews
+to fakenews-reproduction
   ask patches [
-    set grass-amount grass-amount + grass-regrowth-rate
-    if grass-amount > 10 [
-      set grass-amount 10
+    set fakenews-amount fakenews-amount + fakenews-reproduction-rate
+    if fakenews-amount > 10 [
+      set fakenews-amount 10
     ]
-    recolor-grass
+    recolor-fakenews
   ]
-end;;|
-to eat
-  ;; check to make sure there is grass here
-  if ( grass-amount >= 0.1 ) [
-    ;; increment the sheep's energy
-    set suspicion suspicion + 0.1
-    ;; decrement the grass
-    set grass-amount grass-amount - 5
-    recolor-grass
+end
+
+;; check to make sure there is fakenews here
+to exposure
+  if ( fakenews-amount >= 0.1 ) [
+    ;;초록색 먹으면 1추가가됨 *******-> 가짜 뉴스를 접할 수록 의심 떨어지게 해야하니까 -로 부호 수정******************
+    set suspicion suspicion - 0.1            ;; the more fake, the decrease suspicion
+    set fakenews-amount fakenews-amount + 3  ;; increment the fakenews-amount
+    recolor-fakenews
   ]
-end;;|
-
-
-
-;; Each tick a check is made to see if sliders have been changed.
-;; If one has been, the corresponding turtle variable is adjusted
+end
 
 to check-sliders
-
-  if (slider-check-2 != active_tendency)
-    [ ask turtles [ assign-coupling-tendency ]
-      set slider-check-2 active_tendency ]
-  if (slider-check-3 != Degree-of-suspicion)
+  if (slider-check-2 != average-active-tendency)
+    [ ask turtles [ assign-active-tendency ]
+      set slider-check-2 average-active-tendency ]
+  if (slider-check-3 != average-suspicion-degree)
     [ ask turtles [ assign-suspicion ]
-      set slider-check-3 Degree-of-suspicion ]
-  if (slider-check-4 != Worrying-time )
-    [ ask turtles [ assign-test-frequency ]
-      set slider-check-4 Worrying-time ]
+      set slider-check-3 average-suspicion-degree ]
+  if (slider-check-4 != average-worrying-time )
+    [ ask turtles [ assign-suspicion-frequency ]
+      set slider-check-4 average-worrying-time ]
 end
 
 ;; People move about at random.
@@ -215,14 +188,14 @@ to move  ;; turtle procedure
   fd 1
 end
 
-to couple  ;; turtle procedure -- righties only!
+to in-meeting  ;; in meeting color is gray.
   let potential-partner one-of (turtles-at -1 0)
-                          with [not coupled? and shape = "person lefty"]
+                          with [not meeting? and shape = "person lefty"]
   if potential-partner != nobody
-    [ if random-float 10.0 < [coupling-tendency] of potential-partner
+    [ if random-float 10.0 < [active-tendency] of potential-partner
       [ set partner potential-partner
-        set coupled? true
-        ask partner [ set coupled? true ]
+        set meeting? true
+        ask partner [ set meeting? true ]
         ask partner [ set partner myself ]
         move-to patch-here ;; move to center of patch
         ask potential-partner [move-to patch-here] ;; partner moves to center of patch
@@ -230,65 +203,50 @@ to couple  ;; turtle procedure -- righties only!
         ask (patch-at -1 0) [ set pcolor gray - 3 ] ] ]
 end
 
-;; If two peoples are together for longer than either person's commitment variable
-;; allows, the couple breaks up.
-
-to uncouple  ;; turtle procedure
-  if coupled? and (shape = "person righty")
-    [ if (couple-length > commitment) or
-         ([couple-length] of partner) > ([commitment] of partner)
-        [ set coupled? false
-          set couple-length 0
-          ask partner [ set couple-length 0 ]
+;; If two peoples are together for longer than either person's trust variable allows, the relationship breaks up.
+to end-of-meeting  ;; turtle procedure
+  if meeting? and (shape = "person righty")
+    [ if (meeting-time > trust) or
+         ([meeting-time] of partner) > ([trust] of partner)
+        [ set meeting? false
+          set meeting-time 0
+          ask partner [ set meeting-time 0 ]
           set pcolor black
           ask (patch-at -1 0) [ set pcolor black ]
           ask partner [ set partner nobody ]
-          ask partner [ set coupled? false ]
+          ask partner [ set meeting? false ]
           set partner nobody ] ]
 end
 
-;; Infection can occur if either person is fakenews, but the infection is unknown.
-;; This model assumes that people with known infections will continue to couple,
-;; but will automatically practice safe relationship, regardless of their suspicion tendency.
-;; Note also that for condom use to occur, both people must want to use one.  If
-;; either person chooses not to use a condom, infection is possible.  Changing the
-;; primitive to AND in the third line will make it such that if either person
-;; wants to use a condom, infection will not occur.
+to FAKENEWS
+  if meeting? and fakenews? and not known?
+    [ if random-float 10 > suspicion or random-float 10 > ([suspicion] of partner)
+      [ask partner [ set exposure-count (exposure-count - 0.1) ] ] ]
 
-to infect  ;; turtle procedure          ;;★
-  if coupled? and fakenews? and not known?      ;;커플이고,
-    [ if random-float 10 > suspicion or random-float 10 > ([suspicion] of partner) ;;본인 혹은 파트너의 suspicion이 10보다 작으면 다음 if. ;;내 의심정도가 낮고, 상대의 의심도 낮으면
-      [ask partner [ set infection-length (infection-length - 0.1) ] ] ]
-
-  if coupled? and fakenews? and not known?      ;;커플이고,
-    [ if random-float 10 > suspicion or random-float 10 > ([suspicion] of partner) ;;본인 혹은 파트너의 suspicion이 10보다 작으면 다음 if. ;;내 의심정도가 낮고, 상대의 의심도 낮으면
-      [ ifelse random-float 100 < infection-chance   ;;100까지 랜덤값에서 50보다 작으면 감염에 걸림
-          [ ask partner [ set fakenews? true] ] ;; fakenews로
-          [ ask partner [ set fakenews? false ] ] ;; truenews로
-  ]
-
-  ]
+  if meeting? and fakenews? and not known?
+    [ if random-float 10 > suspicion or random-float 10 > ([suspicion] of partner)
+      [ ifelse random-float 100 < exposure-chance
+          [ ask partner [ set fakenews? true] ] ;; fakenews
+          [ ask partner [ set fakenews? false ] ] ;; truenews
+  ] ]
 end
 
-to test  ;; turtle procedure
-  if random-float 52 < test-frequency
+to known-check
+  if random-float 52 < suspicion-frequency
     [ if fakenews?
         [ set known? true ] ]
-  if infection-length > symptoms-show
+  if exposure-count > self-known-check
     [ if random-float 100 < 5
         [ set known? true ] ]
 end
 
-to infection-length-check
-  if infection-length < 56 or infection-length > 44
+to exposure-count-check  ;;exposure times in fakenews ;;사용안함
+  if exposure-count < 56 or exposure-count > 44
   [set known? false]
-
-  if infection-length < 45
+  if exposure-count < 45
   [set fakenews? true]
-
-  if infection-length > 55
+  if exposure-count > 55
   [set fakenews? false]
-
   assign-color
 end
 
@@ -302,9 +260,6 @@ to-report %fakenews
     [ report (count turtles with [fakenews?] / count turtles) * 100 ]
     [ report 0 ]
 end
-
-
-; Copyright 1997 Uri Wilensky.; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
 288
